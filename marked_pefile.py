@@ -1,3 +1,4 @@
+import re
 from pefile.pefile import PE, two_way_dict, MAX_SYMBOL_EXPORT_COUNT, OPTIONAL_HEADER_MAGIC_PE, OPTIONAL_HEADER_MAGIC_PE_PLUS, Structure, SectionStructure, UNW_FLAG_CHAININFO
 
 PAGE_SIZE = 0x1000
@@ -33,6 +34,12 @@ marks_types = [
     ('THUNK_DATA',                          28),
     ('IMPORT_BY_NAME',                      29),
     ('IMPORT_MODULE_NAME',                  30),
+    ('STRING_UNICODE',                      31),
+    ('STRING_ASCII',                        32),
+    ('TABLE',                               33),
+    ('PRE_TABLE',                           34),
+    ('JUMPED_BYTE',                         35),
+    ('INSTRUCTION_BYTE',                    36)
     ]
 
 MARKS = two_way_dict(marks_types)
@@ -106,9 +113,19 @@ class MarkedPE(PE):
             if UnwindInfoStruct.chained_unwind_info.UnwindInformation:
                 self.visit_unwind(UnwindInfoStruct.chained_unwind_info.UnwindInfoStruct)
 
+    def set_zero_word(self, address):
+        self.__data__ = self.__data__[:address + 2] + '\x00\x00' + self.__data__[address + 4:]
 
+    def set_zero_double_word(self, address):
+        self.__data__ = self.__data__[:address + 2] + '\x00\x00\x00\x00\x00\x00' + self.__data__[address + 8:]
 
-    
+    def get_section_by_name(self, section_name):
+        for section in self.sections:
+            if re.match(section_name, section.Name):
+            #if section.Name == section_name:
+                return section
+        return None
+
     def marking(self):
         address_size = 4 if self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE else 8
         null_address = '\x00\x00\x00\x00' if self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE else '\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -313,9 +330,20 @@ class MarkedPE(PE):
         full_pe.next_section_virtual_address = None
         self.sections.append(full_pe)
 
-        
-        
+class PeMemError(Exception):
+    def __init__(self, code, msg, address=None):
+        self.code = code
+        self.msg = msg
+        self.add = address
 
+    def __str__(self):
+        return repr('Error: {}: {} - {}'.format(self.code, self.msg, self.add))
 
-        
+class PEFormatError(Exception):
+    """Generic PE format error exception."""
 
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)        
