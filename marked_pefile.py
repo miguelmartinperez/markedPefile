@@ -126,6 +126,14 @@ class MarkedPE(PE):
                 return section
         return None
 
+    def marking_exception_directory(self, exception_directory):
+        for runtime_function in exception_directory:
+                self.set_visited(runtime_function, tag=MARKS['IMAGE_DIRECTORY_ENTRY_EXCEPTION'])
+                if runtime_function.UnwindInformation & 1:
+                    self.marking_exception_directory(runtime_function.RuntimeFunctionStruct)
+                elif runtime_function.UnwindInformation:
+                    self.visit_unwind(runtime_function.UnwindInfoStruct)
+
     def marking(self):
         address_size = 4 if self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE else 8
         null_address = '\x00\x00\x00\x00' if self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE else '\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -191,10 +199,8 @@ class MarkedPE(PE):
                                                 tag=MARKS['IMAGE_DIRECTORY_ENTRY_RESOURCE'])
 
         if hasattr(self, 'DIRECTORY_ENTRY_EXCEPTION'):
-            for runtime_function in self.DIRECTORY_ENTRY_EXCEPTION:
-                self.set_visited(runtime_function, tag=MARKS['IMAGE_DIRECTORY_ENTRY_EXCEPTION'])
-                if runtime_function.UnwindInformation:
-                    self.visit_unwind(runtime_function.UnwindInfoStruct)
+        	# XXX: To Check
+            self.marking_exception_directory(self.DIRECTORY_ENTRY_EXCEPTION)
 
         if hasattr(self, 'DIRECTORY_ENTRY_TLS'):
             if self.DIRECTORY_ENTRY_TLS.struct.AddressOfCallBacks:
