@@ -165,7 +165,7 @@ class MarkedPE(PE):
                 if import_directory.struct.Name:
                     self.set_visited(pointer=import_directory.struct.Name, size=len(import_directory.dll)+1, tag=MARKS['IMPORT_MODULE_NAME']) # known=True
                     index = import_directory.struct.Name + len(import_directory.dll)+1
-                    while self.__data__[index]== '\x90':
+                    while self.__data__[index]=='\x90' and index<thunk_data_index:
                         self.set_visited(pointer=index, size=1, tag=MARKS['IMPORT_MODULE_NAME'])
                         index += 1
 
