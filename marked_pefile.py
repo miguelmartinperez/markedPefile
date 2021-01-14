@@ -98,7 +98,8 @@ class MarkedPE(PE):
                 pass
 
             else:
-                raise PeMemError(self.__visited__[index], 'Visiting space previously visited', pointer)
+                #raise PeMemError(self.__visited__[index], 'Visiting space previously visited', pointer)
+                debug.warning('Visiting space (Module address:{} Offset:{}) as {} previously visited as {}',self.__base_address__, index, tag, self.__visited__[index])
             index += 1
 
     def visit_unwind(self, UnwindInfoStruct):
