@@ -1,5 +1,6 @@
 import re
 from pefile.pefile import PE, two_way_dict, MAX_SYMBOL_EXPORT_COUNT, OPTIONAL_HEADER_MAGIC_PE, OPTIONAL_HEADER_MAGIC_PE_PLUS, Structure, SectionStructure, UNW_FLAG_CHAININFO
+import volatility.debug as debug
 
 PAGE_SIZE = 0x1000
 
@@ -89,8 +90,6 @@ class MarkedPE(PE):
             size = object.sizeof()
         index = pointer
         while  index < pointer+size:
-            if index == 1413259:
-                pass
             if self.__visited__[index] == MARKS['UNKW_BYTE'] or self.__visited__[index] == tag or force:
                 self.__visited__[index] = tag
             elif self.__visited__[index] == MARKS['NULL_PAGE']:
@@ -99,7 +98,7 @@ class MarkedPE(PE):
 
             else:
                 #raise PeMemError(self.__visited__[index], 'Visiting space previously visited', pointer)
-                debug.warning('Visiting space (Module address:{} Offset:{}) as {} previously visited as {}',self.__base_address__, index, tag, self.__visited__[index])
+                debug.warning('Visiting space (Module address:{} Offset:{}) as {} previously visited as {}'.format(self.__base_address__, index, MARKS[tag], MARKS[self.__visited__[index]]))
             index += 1
 
     def visit_unwind(self, UnwindInfoStruct):
@@ -175,15 +174,16 @@ class MarkedPE(PE):
                     self.set_visited(pointer=thunk_data_index, size=address_size, tag=MARKS['THUNK_DATA']) # known=True
                     if self.__data__[thunk_data_index:thunk_data_index+address_size]==null_address:
                         break
-
-                    for function in import_directory.imports:
-                        if function.hint_name_table_rva:
-                            self.set_visited(pointer=function.hint_name_table_rva, size=len(function.name)+3, tag=MARKS['IMPORT_BY_NAME']) # known=True
-
-                            if (((function.hint_name_table_rva + len(function.name)+3) % 2) != 0) and (self.__data__[function.hint_name_table_rva + len(function.name)+3] == '\x00'):
-                                self.set_visited(pointer=function.hint_name_table_rva + len(function.name)+3, size=1, tag=MARKS['IMPORT_BY_NAME']) # known=True
-                    
                     thunk_data_index += address_size
+
+                for function in import_directory.imports:
+                    if function.hint_name_table_rva:
+                        self.set_visited(pointer=function.hint_name_table_rva, size=len(function.name)+3, tag=MARKS['IMPORT_BY_NAME']) # known=True
+
+                        if (((function.hint_name_table_rva + len(function.name)+3) % 2) != 0) and (self.__data__[function.hint_name_table_rva + len(function.name)+3] == '\x00'):
+                            self.set_visited(pointer=function.hint_name_table_rva + len(function.name)+3, size=1, tag=MARKS['IMPORT_BY_NAME']) # known=True
+                    
+                    
    
         for section in self.sections:
             self.set_visited(section, MARKS['SECTION_HEADER_BYTE'])
@@ -322,6 +322,7 @@ class MarkedPE(PE):
         header.VirtualAddress = 0
         header.VirtualAddress_adj = 0
         header.next_section_virtual_address = self.sections[0].VirtualAddress
+        header.real_size = section_real_size(header)
         self.sections.append(header)
 
         full_pe = SectionStructure(PE.__IMAGE_SECTION_HEADER_format__, pe=self )
@@ -335,6 +336,7 @@ class MarkedPE(PE):
         full_pe.VirtualAddress = 0
         full_pe.VirtualAddress_adj = 0
         full_pe.next_section_virtual_address = None
+        full_pe.real_size = section_real_size(full_pe)
         self.sections.append(full_pe)
 
 class PeMemError(Exception):
