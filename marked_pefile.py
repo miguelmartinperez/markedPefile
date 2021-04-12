@@ -60,8 +60,8 @@ def section_real_size(section):
         return max_size if not max_size % PAGE_SIZE else (max_size / PAGE_SIZE + 1) * PAGE_SIZE
 
 class MarkedPE(PE):
-    def __init__(self, name=None, data=None, fast_load=None, max_symbol_exports=MAX_SYMBOL_EXPORT_COUNT, from_memory=False, valid_pages=None, base_address=None):
-        super(MarkedPE, self).__init__(name=name, data=data, fast_load=fast_load, max_symbol_exports=max_symbol_exports, from_memory=from_memory)
+    def __init__(self, name=None, data=None, fast_load=None, max_symbol_exports=MAX_SYMBOL_EXPORT_COUNT, virtual_layout=False, valid_pages=None, base_address=None):
+        super(MarkedPE, self).__init__(name=name, data=data, fast_load=fast_load, max_symbol_exports=max_symbol_exports, virtual_layout=virtual_layout)
         self.__size__ = len(data)
         self.__base_address__ = base_address
 
