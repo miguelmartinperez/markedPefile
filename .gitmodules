@@ -1,0 +1,3 @@
+[submodule "pefile"]
+	path = pefile
+	url = git@github.com:miguelmartinperez/pefile.git
