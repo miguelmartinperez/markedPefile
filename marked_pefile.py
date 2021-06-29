@@ -1,6 +1,10 @@
 import re
-from pefile.pefile import PE, two_way_dict, MAX_SYMBOL_EXPORT_COUNT, OPTIONAL_HEADER_MAGIC_PE, OPTIONAL_HEADER_MAGIC_PE_PLUS, Structure, SectionStructure, UNW_FLAG_CHAININFO
-import volatility.debug as debug
+from pefile.pefile import PE, two_way_dict, MAX_SYMBOL_EXPORT_COUNT, OPTIONAL_HEADER_MAGIC_PE, OPTIONAL_HEADER_MAGIC_PE_PLUS, Structure, SectionStructure, UNW_FLAG_CHAININFO, PEFormatError 
+
+try:
+    import volatility.debug as logging
+except ImportError:
+    import logging
 
 PAGE_SIZE = 0x1000
 
@@ -60,10 +64,15 @@ def section_real_size(section):
         return max_size if not max_size % PAGE_SIZE else (max_size / PAGE_SIZE + 1) * PAGE_SIZE
 
 class MarkedPE(PE):
-    def __init__(self, name=None, data=None, fast_load=None, max_symbol_exports=MAX_SYMBOL_EXPORT_COUNT, virtual_layout=False, valid_pages=None, base_address=None):
-        super(MarkedPE, self).__init__(name=name, data=data, fast_load=fast_load, max_symbol_exports=max_symbol_exports, virtual_layout=virtual_layout)
+    def __init__(self, name=None, data=None, fast_load=None, max_symbol_exports=MAX_SYMBOL_EXPORT_COUNT, virtual_layout=False, valid_pages=None, base_address=None, architecture=None):
+        try:
+            super(MarkedPE, self).__init__(name=name, data=data, fast_load=fast_load, max_symbol_exports=max_symbol_exports, virtual_layout=virtual_layout)
+        except PEFormatError:
+            delattr(self, 'DOS_HEADER')
+
         self.__size__ = len(data)
         self.__base_address__ = base_address
+        self.__architecture__ = architecture
 
         if valid_pages:
             self.__valid_pages__ = valid_pages
@@ -76,8 +85,22 @@ class MarkedPE(PE):
         else:
             self.__visited__ = [MARKS['UNKW_BYTE']] * self.__size__
             self.valid_pages()
-
-        self.marking()
+        if self.PE_TYPE:
+            self.marking()
+        else:
+            dump = SectionStructure(PE.__IMAGE_SECTION_HEADER_format__, pe=self )
+            dump.Name = 'dump'
+            dump.Misc = 0
+            dump.Misc_PhysicalAddress = 0
+            dump.Misc_VirtualSize = self.__size__
+            dump.PointerToRawData = 0
+            dump.PointerToRawData_adj = 0
+            dump.SizeOfRawData = self.__size__
+            dump.VirtualAddress = 0
+            dump.VirtualAddress_adj = 0
+            dump.next_section_virtual_address = None
+            dump.real_size = section_real_size(dump)
+            self.sections.append(dump)
 
     def valid_pages(self):
         for page_offset in range(0, self.__size__, PAGE_SIZE):
@@ -98,7 +121,7 @@ class MarkedPE(PE):
 
             else:
                 #raise PeMemError(self.__visited__[index], 'Visiting space previously visited', pointer)
-                debug.warning('Visiting space (Module address:{} Offset:{}) as {} previously visited as {}'.format(self.__base_address__, index, MARKS[tag], MARKS[self.__visited__[index]]))
+                logging.warning('Visiting space (Module address:{} Offset:{}) as {} previously visited as {}'.format(self.__base_address__, index, MARKS[tag], MARKS[self.__visited__[index]]))
             index += 1
 
     def visit_unwind(self, UnwindInfoStruct):
@@ -348,11 +371,4 @@ class PeMemError(Exception):
     def __str__(self):
         return repr('Error: {}: {} - {}'.format(self.code, self.msg, self.add))
 
-class PEFormatError(Exception):
-    """Generic PE format error exception."""
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)        
+     
