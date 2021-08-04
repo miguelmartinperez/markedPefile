@@ -1,5 +1,5 @@
 import re
-from pefile.pefile import PE, two_way_dict, MAX_SYMBOL_EXPORT_COUNT, OPTIONAL_HEADER_MAGIC_PE, OPTIONAL_HEADER_MAGIC_PE_PLUS, Structure, SectionStructure, UNW_FLAG_CHAININFO, PEFormatError 
+from .pefile.pefile import PE, two_way_dict, MAX_SYMBOL_EXPORT_COUNT, OPTIONAL_HEADER_MAGIC_PE, OPTIONAL_HEADER_MAGIC_PE_PLUS, Structure, SectionStructure, UNW_FLAG_CHAININFO, PEFormatError 
 
 try:
     import volatility.debug as logging
