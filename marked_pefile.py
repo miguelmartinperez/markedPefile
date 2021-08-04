@@ -152,10 +152,14 @@ class MarkedPE(PE):
     def marking_exception_directory(self, exception_directory):
         for runtime_function in exception_directory:
                 self.set_visited(runtime_function, tag=MARKS['IMAGE_DIRECTORY_ENTRY_EXCEPTION'])
-                if runtime_function.UnwindInformation & 1:
-                    self.marking_exception_directory(runtime_function.RuntimeFunctionStruct)
-                elif runtime_function.UnwindInformation:
-                    self.visit_unwind(runtime_function.UnwindInfoStruct)
+                try:
+                    if runtime_function.UnwindInformation & 1:
+                        self.marking_exception_directory(runtime_function.RuntimeFunctionStruct)
+                    elif runtime_function.UnwindInformation:
+                        self.visit_unwind(runtime_function.UnwindInfoStruct)
+                except:
+                    # TODO log some warning here
+                    pass
 
     def marking(self):
         address_size = 4 if self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE else 8
