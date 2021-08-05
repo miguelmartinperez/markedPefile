@@ -170,17 +170,21 @@ class MarkedPE(PE):
         for directory in self.OPTIONAL_HEADER.DATA_DIRECTORY:
             self.set_visited(directory, MARKS['DATA_DIRECTORY_BYTE'])
             if directory.VirtualAddress and directory.Size:
-                if directory.name=='IMAGE_DIRECTORY_ENTRY_SECURITY':
-                    pass
-                    # TODO: check self.set_visited(pointer=directory.VirtualAddress+directory.get_file_offset(), size=directory.Size, tag=MARKS[directory.name]) 
-                elif directory.name=='IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG':
-                    self.set_visited(pointer=directory.VirtualAddress, size=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size,
-                            tag=MARKS[directory.name])
-                elif directory.name=='IMAGE_DIRECTORY_ENTRY_EXCEPTION':
-                    pass
+                if directory.VirtualAddress < directory.VirtualAddress + directory.Size < self.__size__ :
+                    if directory.name=='IMAGE_DIRECTORY_ENTRY_SECURITY':
+                        pass
+                        # TODO: check self.set_visited(pointer=directory.VirtualAddress+directory.get_file_offset(), size=directory.Size, tag=MARKS[directory.name]) 
+                    elif directory.name=='IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG':
+                        self.set_visited(pointer=directory.VirtualAddress, size=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size,
+                                tag=MARKS[directory.name])
+                    elif directory.name=='IMAGE_DIRECTORY_ENTRY_EXCEPTION':
+                        pass
+                    else:
+                        self.set_visited(pointer=directory.VirtualAddress, size=directory.Size,
+                                tag=MARKS[directory.name])
                 else:
-                    self.set_visited(pointer=directory.VirtualAddress, size=directory.Size,
-                            tag=MARKS[directory.name])
+                    self._PE__warnings.append( "Corrupt directory \"{}\" at offset {} with {} bytes, is out of input range".format(directory.name, directory.VirtualAddress, directory.Size))
+
 
         if hasattr(self, 'DIRECTORY_ENTRY_IMPORT'):
             for import_directory in self.DIRECTORY_ENTRY_IMPORT:
@@ -325,12 +329,12 @@ class MarkedPE(PE):
 
         for section in self.sections:
             section.real_size = section_real_size(section)
-            if all_zero(self.__data__[section.VirtualAddress + min(section.SizeOfRawData, section.Misc_VirtualSize):section.VirtualAddress + section.real_size]):
+            if (section.VirtualAddress + min(section.SizeOfRawData, section.Misc_VirtualSize) < section.VirtualAddress + section.real_size < self.__size__) and all_zero(self.__data__[section.VirtualAddress + min(section.SizeOfRawData, section.Misc_VirtualSize):section.VirtualAddress + section.real_size]):
                 self.set_visited(pointer=section.VirtualAddress + min(section.SizeOfRawData, section.Misc_VirtualSize), 
                                 size=section.real_size - min(section.SizeOfRawData, section.Misc_VirtualSize),
                                 tag=MARKS['END_PAGE_PADDING'])
 
-            elif all_zero(self.__data__[section.VirtualAddress + max(section.SizeOfRawData, section.Misc_VirtualSize):section.VirtualAddress + section.real_size]):
+            elif (section.VirtualAddress + max(section.SizeOfRawData, section.Misc_VirtualSize) < section.VirtualAddress + section.real_size < self.__size__) and all_zero(self.__data__[section.VirtualAddress + max(section.SizeOfRawData, section.Misc_VirtualSize):section.VirtualAddress + section.real_size]):
                 self.set_visited(pointer=section.VirtualAddress + max(section.SizeOfRawData, section.Misc_VirtualSize), 
                                 size=section.real_size - max(section.SizeOfRawData, section.Misc_VirtualSize),
                                 tag=MARKS['END_PAGE_PADDING'])
