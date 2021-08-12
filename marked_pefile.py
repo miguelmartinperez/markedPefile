@@ -208,7 +208,7 @@ class MarkedPE(PE):
                     thunk_data_index += address_size
 
                 for function in import_directory.imports:
-                    if function.hint_name_table_rva:
+                    if hasattr(function, 'hint_name_table_rva') and function.hint_name_table_rva:
                         self.set_visited(pointer=function.hint_name_table_rva, size=len(function.name)+3, tag=MARKS['IMPORT_BY_NAME']) # known=True
 
                         if (((function.hint_name_table_rva + len(function.name)+3) % 2) != 0) and (self.__data__[function.hint_name_table_rva + len(function.name)+3] == '\x00'):
