@@ -3,5 +3,8 @@
 # Dependencies
 systemdeps="git"
 
+# Install system dependencies
+apt-get install -y $systemdeps
+
 # Pefile
-git clone --branch pememory git@github.com:miguelmartinperez/pefile.git
+git clone --depth 1 https://github.com/miguelmartinperez/pefile.git
