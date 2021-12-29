@@ -211,7 +211,8 @@ class MarkedPE(PE):
                     self.set_visited(pointer=import_directory.struct.Name, size=len(import_directory.dll) + 1,
                                      tag=MARKS['IMPORT_MODULE_NAME'])  # known=True
                     index = import_directory.struct.Name + len(import_directory.dll) + 1
-                    while self.__data__[index] == '\x90' and index < thunk_data_index:
+                    # while self.__data__[index] == '\x90' and index < thunk_data_index: # Python 2
+                    while self.__data__[index] == 144 and index < thunk_data_index:
                         self.set_visited(pointer=index, size=1, tag=MARKS['IMPORT_MODULE_NAME'])
                         index += 1
 
@@ -227,8 +228,10 @@ class MarkedPE(PE):
                         self.set_visited(pointer=function.hint_name_table_rva, size=len(function.name) + 3,
                                          tag=MARKS['IMPORT_BY_NAME'])  # known=True
 
-                        if (((function.hint_name_table_rva + len(function.name) + 3) % 2) != 0) and (
-                                self.__data__[function.hint_name_table_rva + len(function.name) + 3] == '\x00'):
+                        # if (((function.hint_name_table_rva + len(function.name) + 3) % 2) != 0) and (self.__data__[function.hint_name_table_rva + len(function.name) + 3] == '\x00'):  # Python 2
+                        if (((function.hint_name_table_rva + len(function.name) + 3) % 2) != 0) and (self.__data__[
+                                                                                                         function.hint_name_table_rva + len(
+                                                                                                             function.name) + 3] == 0):
                             self.set_visited(pointer=function.hint_name_table_rva + len(function.name) + 3, size=1,
                                              tag=MARKS['IMPORT_BY_NAME'])  # known=True
 
@@ -261,36 +264,31 @@ class MarkedPE(PE):
                     AddressOfCallBacksIndex += address_size
 
         if hasattr(self, 'DIRECTORY_ENTRY_LOAD_CONFIG'):
-            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 68) or \
-                    (
-                            self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 104):
+            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 68) or (
+                    self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 104):
                 self.set_visited(pointer=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.SEHandlerTable - self.__base_address__,
                                  size=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.SEHandlerCount * 4,
                                  tag=MARKS['IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG'])
 
-            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 88) or \
-                    (
-                            self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 144):
+            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 88) or (
+                    self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 144):
                 extra_bytes = (
                                       self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.GuardFlags & IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK) >> IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT
-
                 self.set_visited(
                     pointer=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.GuardCFFunctionTable - self.__base_address__,
                     size=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.GuardCFFunctionCount * (4 + extra_bytes),
                     tag=MARKS['IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG'])
 
-            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 108) or \
-                    (
-                            self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 168):
+            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 108) or (
+                    self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 168):
                 if hasattr(self.DIRECTORY_ENTRY_LOAD_CONFIG.struct, 'GuardAddressTakenIatEntryTable'):
                     self.set_visited(
                         pointer=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.GuardAddressTakenIatEntryTable - self.__base_address__,
                         size=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.GuardAddressTakenIatEntryCount * 4,
                         tag=MARKS['IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG'])
 
-            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 116) or \
-                    (
-                            self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 184):
+            if (self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 116) or (
+                    self.PE_TYPE == OPTIONAL_HEADER_MAGIC_PE_PLUS and self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.Size > 184):
                 if hasattr(self.DIRECTORY_ENTRY_LOAD_CONFIG.struct, 'GuardLongJumpTargetTable'):
                     self.set_visited(
                         pointer=self.DIRECTORY_ENTRY_LOAD_CONFIG.struct.GuardLongJumpTargetTable - self.__base_address__,
